@@ -11,6 +11,21 @@ Findra was previously released as FastFinder. The app automatically migrates the
 [![Swift](https://img.shields.io/badge/Swift-5.10-orange)](https://swift.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+<p align="center">
+  <img src="assets/findra-logo.png" alt="Findra logo" width="96" height="96">
+</p>
+
+## Preview
+
+<p align="center">
+  <img src="assets/findra-preview.gif" alt="Findra interface preview" width="760">
+</p>
+
+<p align="center">
+  <img src="assets/screenshot-light.png" alt="Findra light mode screenshot" width="48%">
+  <img src="assets/screenshot-dark.png" alt="Findra dark mode screenshot" width="48%">
+</p>
+
 ---
 
 ## Table of Contents

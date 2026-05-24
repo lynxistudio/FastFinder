@@ -19,3 +19,6 @@ build/
 *.o
 *.swiftdoc
 *.swiftmodule
+# Local presentation source captures
+Screen Recording*.mov
+SCREEN SHOT*.png

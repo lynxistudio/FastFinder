@@ -1,7 +1,6 @@
 import SwiftUI
 import AppKit
 import Quartz
-import UniformTypeIdentifiers
 
 // MARK: - Main Content View
 
@@ -15,7 +14,6 @@ struct ContentView: View {
     @State private var directoryToRemove: IndexDirectory?
     @State private var showExcludedSheet = false
     @State private var newExcludedPattern = ""
-    @State private var renameValue: String = ""
     @State private var isExcludedExpanded = false
     @FocusState private var isSearchFocused: Bool
     @FocusState private var isRenameFocused: Bool
@@ -49,10 +47,7 @@ struct ContentView: View {
         }
         .onAppear { isSearchFocused = true }
         .onChange(of: appState.editingFileId) { _, newId in
-            if let id = newId {
-                if let file = appState.searchResults.first(where: { $0.id == id }) {
-                    renameValue = file.fileName
-                }
+            if newId != nil {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     isRenameFocused = true
                 }
@@ -60,6 +55,10 @@ struct ContentView: View {
         }
         .onChange(of: isRenameFocused) { _, focused in
             if !focused { appState.cancelEditing() }
+        }
+        .onChange(of: appState.searchResults) { _, results in
+            let visibleIds = Set(results.map(\.id))
+            appState.selectedFiles.formIntersection(visibleIds)
         }
     }
 
@@ -309,16 +308,11 @@ struct ContentView: View {
         Table(appState.searchResults, selection: $appState.selectedFiles, sortOrder: $sortOrder) {
             TableColumn(locale.tableFileName, value: \.fileName) { file in
                 HStack(spacing: 6) {
-                    // Icon — draggable (small target, won't block row selection)
                     FileIconView(filePath: file.fullPath, fileName: file.fileName, isDirectory: file.isDirectory)
                         .frame(width: 18, height: 18)
-                        .onDrag {
-                            let url = URL(fileURLWithPath: file.fullPath)
-                            return NSItemProvider(object: url as NSURL)
-                        }
 
                     if appState.editingFileId == file.id {
-                        TextField("", text: $renameValue)
+                        TextField("", text: $appState.editingFileName)
                             .textFieldStyle(.plain)
                             .font(.system(size: 13))
                             .focused($isRenameFocused)
@@ -331,6 +325,16 @@ struct ContentView: View {
                     }
                 }
                 .contentShape(Rectangle())
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay {
+                    if appState.editingFileId != file.id {
+                        FinderDragSourceOverlay(
+                            file: file,
+                            selectedIds: $appState.selectedFiles,
+                            visibleFiles: appState.searchResults
+                        )
+                    }
+                }
             }
             .width(ideal: 300)
 
@@ -399,7 +403,7 @@ struct ContentView: View {
             Button(locale.rename) { appState.startEditingFile(files[0]) }
             Divider()
             Button(locale.showInFinder) { appState.revealInFinder(files[0]) }
-            Button(locale.quickLook) { quickLookSingle(files[0]) }
+            Button(locale.quickLook) { quickLookFiles(files) }
             Divider()
             Button(locale.open) {
                 NSWorkspace.shared.open(URL(fileURLWithPath: files[0].fullPath))
@@ -407,6 +411,7 @@ struct ContentView: View {
             Divider()
             Button(locale.moveToTrash, role: .destructive) { appState.deleteFiles(ids) }
         } else if !ids.isEmpty {
+            Button(locale.quickLook) { quickLookFiles(files) }
             Button(locale.open) { appState.openSelectedFiles() }
             Divider()
             Button(locale.moveToTrash, role: .destructive) { appState.deleteFiles(ids) }
@@ -436,18 +441,21 @@ struct ContentView: View {
     // MARK: - Actions
 
     func quickLookSingle(_ file: IndexedFile) {
-        QuickLookCoordinator.shared.previewURLs = [URL(fileURLWithPath: file.fullPath)]
-        if let panel = QLPreviewPanel.shared() {
-            panel.dataSource = QuickLookCoordinator.shared
-            panel.makeKeyAndOrderFront(nil)
-        }
+        quickLookFiles([file])
     }
 
     func quickLookSelected() {
         let files = appState.dbManager.getFilesByIds(appState.selectedFiles)
+        quickLookFiles(files)
+    }
+
+    func quickLookFiles(_ files: [IndexedFile]) {
+        guard !files.isEmpty else { return }
         QuickLookCoordinator.shared.previewURLs = files.map { URL(fileURLWithPath: $0.fullPath) }
         if let panel = QLPreviewPanel.shared() {
             panel.dataSource = QuickLookCoordinator.shared
+            panel.reloadData()
+            panel.currentPreviewItemIndex = 0
             panel.makeKeyAndOrderFront(nil)
         }
     }
@@ -482,6 +490,116 @@ struct ContentView: View {
         }
         let orderStr = order == .reverse ? "reverse" : "forward"
         UserDefaults.standard.set("\(sortName):\(orderStr)", forKey: "FastFinderSortOrder")
+    }
+}
+
+// MARK: - Finder Drag Source
+
+struct FinderDragSourceOverlay: NSViewRepresentable {
+    let file: IndexedFile
+    @Binding var selectedIds: Set<Int64>
+    let visibleFiles: [IndexedFile]
+
+    func makeNSView(context: Context) -> FinderDragSourceView {
+        FinderDragSourceView()
+    }
+
+    func updateNSView(_ nsView: FinderDragSourceView, context: Context) {
+        nsView.file = file
+        nsView.selectedIds = $selectedIds
+        nsView.visibleFiles = visibleFiles
+    }
+}
+
+final class FinderDragSourceView: NSView, NSDraggingSource {
+    var file: IndexedFile?
+    var selectedIds: Binding<Set<Int64>> = .constant([])
+    var visibleFiles: [IndexedFile] = []
+
+    private var mouseDownLocation: NSPoint?
+    private var armedSelectedIds: Set<Int64> = []
+    private var armedVisibleFiles: [IndexedFile] = []
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        bounds.contains(point) ? self : nil
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let file else { return }
+        mouseDownLocation = convert(event.locationInWindow, from: nil)
+        updateSelection(for: file, event: event)
+        armedSelectedIds = selectedIds.wrappedValue
+        armedVisibleFiles = visibleFiles
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let file, let start = mouseDownLocation else { return }
+        let location = convert(event.locationInWindow, from: nil)
+        let distance = hypot(location.x - start.x, location.y - start.y)
+        guard distance >= 3 else { return }
+
+        beginFinderDrag(for: file, with: event)
+        resetArmedDrag()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        resetArmedDrag()
+    }
+
+    private func updateSelection(for file: IndexedFile, event: NSEvent) {
+        if event.modifierFlags.contains(.command) {
+            if selectedIds.wrappedValue.contains(file.id) {
+                selectedIds.wrappedValue.remove(file.id)
+            } else {
+                selectedIds.wrappedValue.insert(file.id)
+            }
+        } else if !selectedIds.wrappedValue.contains(file.id) {
+            selectedIds.wrappedValue = [file.id]
+        }
+    }
+
+    private func beginFinderDrag(for file: IndexedFile, with event: NSEvent) {
+        let files: [IndexedFile]
+        let dragSelectedIds = armedSelectedIds
+        let dragVisibleFiles = armedVisibleFiles.isEmpty ? visibleFiles : armedVisibleFiles
+
+        if dragSelectedIds.contains(file.id) {
+            files = dragVisibleFiles.filter { dragSelectedIds.contains($0.id) }
+        } else {
+            files = [file]
+        }
+
+        let urls = files.map { URL(fileURLWithPath: $0.fullPath) }
+        guard !urls.isEmpty else { return }
+
+        let dragPoint = convert(event.locationInWindow, from: nil)
+        let items = urls.enumerated().map { index, url in
+            let item = NSDraggingItem(pasteboardWriter: url as NSURL)
+            let icon = NSWorkspace.shared.icon(forFile: url.path)
+            icon.size = NSSize(width: 32, height: 32)
+            let offset = CGFloat(min(index, 4)) * 2
+            let frame = NSRect(x: dragPoint.x - 16 + offset, y: dragPoint.y - 16 - offset, width: 32, height: 32)
+            item.setDraggingFrame(frame, contents: icon)
+            return item
+        }
+
+        let session = beginDraggingSession(with: items, event: event, source: self)
+        session.animatesToStartingPositionsOnCancelOrFail = true
+        session.draggingFormation = .stack
+    }
+
+    private func resetArmedDrag() {
+        mouseDownLocation = nil
+        armedSelectedIds = []
+        armedVisibleFiles = []
+    }
+
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        [.copy, .move]
+    }
+
+    func ignoreModifierKeys(for session: NSDraggingSession) -> Bool {
+        false
     }
 }
 

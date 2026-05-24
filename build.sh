@@ -79,9 +79,9 @@ cat > "$OUTPUT_APP/Contents/Info.plist" << 'PLIST'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.0.0</string>
+    <string>2.0.1</string>
     <key>CFBundleVersion</key>
-    <string>200</string>
+    <string>201</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSHighResolutionCapable</key>
@@ -90,11 +90,16 @@ cat > "$OUTPUT_APP/Contents/Info.plist" << 'PLIST'
     <true/>
     <key>LSUIElement</key>
     <false/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
 </dict>
 </plist>
 PLIST
 
 echo "Info.plist created"
+
+# Classic app bundle marker for LaunchServices compatibility
+printf 'APPL????' > "$OUTPUT_APP/Contents/PkgInfo"
 
 # Ad-hoc code signing
 echo "--- Signing ---"

@@ -87,6 +87,7 @@ FastFinder gives you **total control** over what gets indexed, uses a lightweigh
 - **Native context menu** — right-click any result to rename, reveal in Finder, Quick Look, open, or move to trash
 - **Inline renaming** — press Enter or use the context menu to rename files directly
 - **Multi-select** — select multiple files for batch operations
+- **Finder drag-and-drop** — drag one or more results to Finder to copy, or hold `Cmd` while dragging to move
 - **Column sorting** — sort results by name, size, modification date, or path
 
 ### Technical
@@ -141,6 +142,7 @@ The compiled `FastFinder.app` will be placed on your Desktop. Requires macOS 14.
 2. Results appear instantly, sorted by relevance
 3. Click any column header to sort by name, size, date, or path
 4. Double-click a result to open it, or use the context menu for more options
+5. Drag one or more selected results to Finder to copy them; hold `Cmd` while dragging to move them
 
 ### File Operations
 
@@ -150,6 +152,8 @@ Right-click any search result to access:
 - **Quick Look** — preview the file with Quick Look (images, PDFs, text, etc.)
 - **Open** — open with the default application
 - **Move to Trash** — send the file to Trash
+
+You can also drag selected search results directly into Finder. Normal drag copies the files; `Cmd` + drag moves them.
 
 ### Keyboard Shortcuts
 

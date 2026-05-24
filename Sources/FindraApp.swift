@@ -55,9 +55,10 @@ struct IndexedFile: Identifiable, Equatable {
 
 // MARK: - App Delegate (for menu bar and lifecycle)
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var menuBarItem: NSStatusItem?
     private var window: NSWindow?
+    private var hotKeyMonitor: Any?
     private weak var appState: AppState?
     private weak var localeManager: LocaleManager?
 
@@ -76,13 +77,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func configure(appState: AppState, localeManager: LocaleManager) {
+    func configure(appState: AppState, localeManager: LocaleManager, window: NSWindow? = nil) {
         self.appState = appState
         self.localeManager = localeManager
+        if let window {
+            adoptMainWindow(window)
+        }
     }
 
     private func setupGlobalHotkey() {
-        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+        hotKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
             if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 49 { // space key
                 self.toggleWindow()
             }
@@ -101,6 +105,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let appState, let localeManager else { return }
 
         if window == nil {
+            adoptExistingWindowIfAvailable()
+        }
+
+        if window == nil {
             let contentView = NSHostingView(
                 rootView: ContentView()
                     .environmentObject(appState)
@@ -115,9 +123,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window?.title = "Findra"
             window?.contentView = contentView
             window?.center()
+            if let window {
+                adoptMainWindow(window)
+            }
         }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func adoptExistingWindowIfAvailable() {
+        if let window = NSApp.windows.first(where: { $0.title == "Findra" && !($0 is NSPanel) }) {
+            adoptMainWindow(window)
+        }
+    }
+
+    private func adoptMainWindow(_ window: NSWindow) {
+        guard self.window !== window else { return }
+        self.window = window
+        window.title = "Findra"
+        window.identifier = NSUserInterfaceItemIdentifier("FindraMainWindow")
+        window.isReleasedWhenClosed = false
+        window.delegate = self
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        return false
+    }
+}
+
+private struct WindowAccessor: NSViewRepresentable {
+    let onResolve: (NSWindow) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window {
+                onResolve(window)
+            }
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            if let window = nsView.window {
+                onResolve(window)
+            }
+        }
     }
 }
 
@@ -135,6 +188,11 @@ struct FindraApp: App {
                 .environmentObject(appState)
                 .environmentObject(localeManager)
                 .frame(minWidth: 900, minHeight: 600)
+                .background(
+                    WindowAccessor { window in
+                        appDelegate.configure(appState: appState, localeManager: localeManager, window: window)
+                    }
+                )
                 .onAppear {
                     appDelegate.configure(appState: appState, localeManager: localeManager)
                     appState.initialize(locale: localeManager)

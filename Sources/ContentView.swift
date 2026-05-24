@@ -2,6 +2,9 @@ import SwiftUI
 import AppKit
 import Quartz
 
+private let sortOrderDefaultsKey = "FindraSortOrder"
+private let legacySortOrderDefaultsKey = "FastFinderSortOrder"
+
 // MARK: - Main Content View
 
 struct ContentView: View {
@@ -19,7 +22,12 @@ struct ContentView: View {
     @FocusState private var isRenameFocused: Bool
 
     init() {
-        if let savedSort = UserDefaults.standard.string(forKey: "FastFinderSortOrder") {
+        if UserDefaults.standard.string(forKey: sortOrderDefaultsKey) == nil,
+           let legacySort = UserDefaults.standard.string(forKey: legacySortOrderDefaultsKey) {
+            UserDefaults.standard.set(legacySort, forKey: sortOrderDefaultsKey)
+        }
+
+        if let savedSort = UserDefaults.standard.string(forKey: sortOrderDefaultsKey) {
             let parts = savedSort.split(separator: ":")
             if parts.count == 2 {
                 let order: SortOrder = parts[1] == "reverse" ? .reverse : .forward
@@ -489,7 +497,7 @@ struct ContentView: View {
         default: sortName = "modDate"
         }
         let orderStr = order == .reverse ? "reverse" : "forward"
-        UserDefaults.standard.set("\(sortName):\(orderStr)", forKey: "FastFinderSortOrder")
+        UserDefaults.standard.set("\(sortName):\(orderStr)", forKey: sortOrderDefaultsKey)
     }
 }
 

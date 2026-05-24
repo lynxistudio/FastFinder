@@ -58,6 +58,8 @@ struct IndexedFile: Identifiable, Equatable {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarItem: NSStatusItem?
     private var window: NSWindow?
+    private weak var appState: AppState?
+    private weak var localeManager: LocaleManager?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -68,10 +70,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupMenuBar() {
         menuBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = menuBarItem?.button {
-            button.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "FastFinder")
+            button.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Findra")
             button.action = #selector(toggleWindow)
             button.target = self
         }
+    }
+
+    func configure(appState: AppState, localeManager: LocaleManager) {
+        self.appState = appState
+        self.localeManager = localeManager
     }
 
     private func setupGlobalHotkey() {
@@ -91,15 +98,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showWindow() {
+        guard let appState, let localeManager else { return }
+
         if window == nil {
-            let contentView = NSHostingView(rootView: ContentView())
+            let contentView = NSHostingView(
+                rootView: ContentView()
+                    .environmentObject(appState)
+                    .environmentObject(localeManager)
+            )
             window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 1000, height: 700),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
-            window?.title = "FastFinder"
+            window?.title = "Findra"
             window?.contentView = contentView
             window?.center()
         }
@@ -111,7 +124,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 // MARK: - App Entry
 
 @main
-struct FastFinderApp: App {
+struct FindraApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
     @StateObject private var localeManager = LocaleManager()
@@ -123,6 +136,7 @@ struct FastFinderApp: App {
                 .environmentObject(localeManager)
                 .frame(minWidth: 900, minHeight: 600)
                 .onAppear {
+                    appDelegate.configure(appState: appState, localeManager: localeManager)
                     appState.initialize(locale: localeManager)
                 }
         }
@@ -157,8 +171,12 @@ final class AppState: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var scanTimer: Timer?
     private var incrementalTimer: Timer?
+    private var isInitialized = false
 
     func initialize(locale: LocaleManager) {
+        guard !isInitialized else { return }
+        isInitialized = true
+
         self.locale = locale
         dbManager.setupDatabase()
         loadDirectories()

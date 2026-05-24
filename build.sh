@@ -1,16 +1,16 @@
 #!/bin/bash
 set -e
 
-# FastFinder Build Script
+# Findra Build Script
 # Compiles SwiftUI app and packages as .app bundle
 
-APP_NAME="FastFinder"
+APP_NAME="Findra"
 BUILD_DIR=$(dirname "$0")
 SRC_DIR="$BUILD_DIR/Sources"
-OUTPUT_APP="$HOME/Desktop/FastFinder.app"
+OUTPUT_APP="$HOME/Desktop/Findra.app"
 ICNS_PATH="$BUILD_DIR/AppIcon.icns"
 
-echo "=== FastFinder Build ==="
+echo "=== Findra Build ==="
 echo "SDK: $(xcrun --show-sdk-path)"
 echo ""
 
@@ -34,7 +34,7 @@ swiftc \
     -lsqlite3 \
     -O \
     *.swift \
-    -o "$BUILD_DIR/FastFinder"
+    -o "$BUILD_DIR/Findra"
 
 echo "Compilation successful!"
 
@@ -44,7 +44,7 @@ mkdir -p "$OUTPUT_APP/Contents/MacOS"
 mkdir -p "$OUTPUT_APP/Contents/Resources"
 
 # Move binary into bundle
-mv "$BUILD_DIR/FastFinder" "$OUTPUT_APP/Contents/MacOS/FastFinder"
+mv "$BUILD_DIR/Findra" "$OUTPUT_APP/Contents/MacOS/Findra"
 
 # Copy icon
 if [ -f "$ICNS_PATH" ]; then
@@ -63,25 +63,25 @@ cat > "$OUTPUT_APP/Contents/Info.plist" << 'PLIST'
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>FastFinder</string>
+    <string>Findra</string>
     <key>CFBundleExecutable</key>
-    <string>FastFinder</string>
+    <string>Findra</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.fastfinder.app</string>
+    <string>com.lynxistudio.findra</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>FastFinder</string>
+    <string>Findra</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.0.1</string>
+    <string>2.1.0</string>
     <key>CFBundleVersion</key>
-    <string>201</string>
+    <string>210</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSHighResolutionCapable</key>

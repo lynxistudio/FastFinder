@@ -1,6 +1,8 @@
 # Compiled binary
 FastFinder
+Findra
 !FastFinder/
+!Findra/
 
 # macOS
 .DS_Store

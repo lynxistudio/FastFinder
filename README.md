@@ -1,10 +1,12 @@
-# FastFinder
+# Findra
 
 > **Instant file search for macOS — the Everything equivalent you've been missing.**
 
-FastFinder is a native macOS file search engine built for speed. It indexes millions of files across local drives and network storage (NAS, NFS, SMB) using SQLite with FTS5 full-text search, delivers results in milliseconds, and stays up-to-date via FSEvents real-time monitoring.
+Findra is a native macOS file search engine built for speed. It indexes millions of files across local drives and network storage (NAS, NFS, SMB) using SQLite with FTS5 full-text search, delivers results in milliseconds, and stays up-to-date via FSEvents real-time monitoring.
 
-[![Download](https://img.shields.io/badge/download-v2.0.1-brightgreen)](https://github.com/lynxistudio/FastFinder/releases/latest)
+Findra was previously released as FastFinder. The app automatically migrates the old local index on first launch.
+
+[![Download](https://img.shields.io/badge/download-v2.1.0-brightgreen)](https://github.com/lynxistudio/Findra/releases/latest)
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-5.10-orange)](https://swift.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -13,7 +15,7 @@ FastFinder is a native macOS file search engine built for speed. It indexes mill
 
 ## Table of Contents
 
-- [Why FastFinder?](#why-fastfinder)
+- [Why Findra?](#why-findra)
 - [Features](#features)
 - [Quick Start](#quick-start)
 - [Usage Guide](#usage-guide)
@@ -28,7 +30,7 @@ FastFinder is a native macOS file search engine built for speed. It indexes mill
 
 ---
 
-## Why FastFinder?
+## Why Findra?
 
 ### The Problem
 
@@ -46,7 +48,7 @@ Windows users have had [Everything](https://www.voidtools.com/) — a lightning-
 
 ### The Solution
 
-FastFinder gives you **total control** over what gets indexed, uses a lightweight SQLite FTS5 engine for sub-millisecond search, and keeps the index fresh with FSEvents real-time monitoring. It's:
+Findra gives you **total control** over what gets indexed, uses a lightweight SQLite FTS5 engine for sub-millisecond search, and keeps the index fresh with FSEvents real-time monitoring. It's:
 
 - **Fast**: 50ms search across 500,000 files
 - **Lightweight**: ~3MB binary, ~50MB RAM with 1M indexed files
@@ -69,7 +71,7 @@ FastFinder gives you **total control** over what gets indexed, uses a lightweigh
 
 - **Per-directory indexing** — add individual directories; only what you add gets indexed
 - **Multiple directory types** — label each as Local, NFS, or SMB for appropriate scan strategies
-- **Exclusion rules** — skip directories matching patterns like `node_modules`, `.git`, `__pycache__`, `vendor`, `build`, and more
+- **Exclusion rules** — skip directories matching patterns like `node_modules`, `.git`, `.cache`, `tmp`, and more
 - **13 default exclusions** — noise directories are skipped automatically
 
 ### Real-Time Updates
@@ -103,20 +105,20 @@ FastFinder gives you **total control** over what gets indexed, uses a lightweigh
 
 ### Option 1: Download Pre-built App (Recommended)
 
-1. Go to the [Releases page](https://github.com/lynxistudio/FastFinder/releases)
-2. Download `FastFinder_v2.0.1.zip` from the latest release
-3. Unzip and drag `FastFinder.app` to your `/Applications` folder
+1. Go to the [Releases page](https://github.com/lynxistudio/Findra/releases)
+2. Download `Findra_v2.1.0.zip` from the latest release
+3. Unzip and drag `Findra.app` to your `/Applications` folder
 4. On first launch, **right-click the app → Open** (or go to System Settings → Privacy & Security → Allow)
 
 ### Option 2: Build from Source
 
 ```bash
-git clone https://github.com/lynxistudio/FastFinder.git
-cd FastFinder
+git clone https://github.com/lynxistudio/Findra.git
+cd Findra
 bash build.sh
 ```
 
-The compiled `FastFinder.app` will be placed on your Desktop. Requires macOS 14.0+ and Xcode Command Line Tools (`xcode-select --install`).
+The compiled `Findra.app` will be placed on your Desktop. Requires macOS 14.0+ and Xcode Command Line Tools (`xcode-select --install`).
 
 ---
 
@@ -159,7 +161,7 @@ You can also drag selected search results directly into Finder. Normal drag copi
 
 | Shortcut | Action |
 |---|---|
-| `Cmd+Shift+Space` | Toggle FastFinder window |
+| `Cmd+Shift+Space` | Toggle Findra window |
 | `Enter` | Start renaming selected file |
 | `Space` | Quick Look selected file |
 | `Cmd+O` | Open selected file |
@@ -241,11 +243,9 @@ User types "report"
       │
       ▼
 ┌─────────────────────────────┐
-│ SELECT * FROM files_fts     │
-│ WHERE files_fts MATCH       │
-│ 'report*'                   │
-│ ORDER BY rank               │
-│ LIMIT 10000                 ││
+│ Single token: file_name LIKE │
+│ Multi-token: files_fts MATCH │
+│ LIMIT 10000                  │
 └─────────────────────────────┘
       │
       ▼
@@ -260,8 +260,8 @@ User types "report"
 | Decision | Rationale |
 |---|---|
 | SQLite over CoreData/Spotlight | Portability, speed, zero background daemon, full control |
-| FTS5 over LIKE queries | Tokenized search is 10-100x faster for large datasets |
-| `fd` as primary scanner, `find` as fallback | `fd` is ~5x faster, respects `.gitignore`-style patterns |
+| LIKE + FTS5 search | Single-token substring search stays flexible; multi-token FTS keeps larger queries fast |
+| `fd` as primary scanner, `find` as fallback | `fd` is fast when installed, while `/usr/bin/find` keeps the app dependency-free |
 | FSEvents for local, timed scans for network | Network filesystems don't reliably fire FSEvents |
 | Atomic `INSERT OR REPLACE` transactions | Prevents index corruption if a scan is interrupted |
 | `sips` + `iconutil` for icon generation | No Xcode asset catalog dependency; buildable with `swiftc` only |
@@ -271,9 +271,9 @@ User types "report"
 ## Project Structure
 
 ```
-FastFinder/
+Findra/
 ├── Sources/
-│   ├── FastFinderApp.swift      # @main entry, AppDelegate, data models, AppState
+│   ├── FindraApp.swift          # @main entry, AppDelegate, data models, AppState
 │   ├── ContentView.swift        # SwiftUI layout: sidebar, search bar, results table
 │   ├── DatabaseManager.swift    # SQLite setup, schema, CRUD, FTS5 table management
 │   ├── ScanManager.swift        # fd/find invocation, FSEvents watcher, incremental scan
@@ -287,9 +287,9 @@ FastFinder/
 ### File Descriptions
 
 <details>
-<summary><b>FastFinderApp.swift</b> — Application entry point and state</summary>
+<summary><b>FindraApp.swift</b> — Application entry point and state</summary>
 
-- `@main struct FastFinderApp`: SwiftUI App entry, injects `AppState` and `LocaleManager` as environment objects
+- `@main struct FindraApp`: SwiftUI App entry, injects `AppState` and `LocaleManager` as environment objects
 - `AppDelegate`: Manages menu bar icon, global hotkey (`Cmd+Shift+Space`), and window lifecycle
 - `AppState`: Central `ObservableObject` — owns `DatabaseManager`, `ScanManager`, `SearchManager`; coordinates indexing, search, and file operations
 - `DirectoryType`: Enum for `local` / `nfs` / `smb` with localized display names
@@ -312,7 +312,7 @@ FastFinder/
 <details>
 <summary><b>DatabaseManager.swift</b> — SQLite persistence layer</summary>
 
-- Schema: `directories`, `files`, `files_fts` (FTS5 virtual table), `excluded_patterns`
+- Schema: `directories`, `files`, `files_fts` (FTS5 virtual table), `excluded_dirs`
 - FTS5 with `unicode61` tokenizer, content synchronization with `files` table
 - Atomic operations: `replaceDirectoryEntries()` uses `DELETE + INSERT` inside a single transaction
 - Full CRUD: add/remove/update directories; insert/delete/rename files; manage exclusion patterns
@@ -323,12 +323,12 @@ FastFinder/
 <details>
 <summary><b>ScanManager.swift</b> — File system scanner and watcher</summary>
 
-- Primary scanner: `fd` with `--type f --type d --hidden` flags, parsed line-by-line
+- Primary scanner: `fd` with `--type` and `--absolute-path`, parsed line-by-line
 - Fallback scanner: `find` when `fd` is unavailable
 - Exclusion filtering: matches directory names against `excludedPatterns` list
-- Default exclusions (13 patterns): `.git`, `node_modules`, `__pycache__`, `.DS_Store`, `vendor`, `build`, `dist`, `.next`, `.nuxt`, `target`, `coverage`, `.terraform`, `.cache`
-- FSEvents: `FSEventStreamCreate` with latency of 1.0s, callback dispatches to incremental scan
-- Incremental scan: uses `fd --changed-within 2m` to identify recently changed files
+- Default exclusions (13 patterns): `.git`, `node_modules`, `.cache`, `tmp`, `temp`, `Trash`, `Recycle Bin`, `@eaDir`, `#recycle`, `.recycle`, `System Volume Information`, `.DS_Store`, `Thumbs.db`
+- FSEvents: `FSEventStreamCreate` with file-level events, callback updates changed paths in the index
+- Incremental scan: uses the last scan timestamp with the `find` fallback and FSEvents for local changes
 - Pipe management: `readabilityHandler` on `FileHandle` to avoid deadlocks on large output
 
 </details>
@@ -336,9 +336,9 @@ FastFinder/
 <details>
 <summary><b>SearchManager.swift</b> — FTS5 query engine</summary>
 
-- Query construction: sanitizes input, builds `MATCH` queries with proper escaping
-- Tokenization: splits user input and constructs FTS5-compatible search terms
-- Result: returns `[IndexedFile]` with ranking from FTS5 `rank` column
+- Query construction: trims input and splits multi-word searches into tokens
+- Search strategy: single-token searches use `LIKE`; multi-token searches use FTS5 `MATCH`
+- Result: returns `[IndexedFile]` records from the SQLite index
 - Limit: 10,000 results per query for UI performance
 
 </details>
@@ -367,14 +367,14 @@ FastFinder/
 
 ```bash
 # Clone the repository
-git clone https://github.com/lynxistudio/FastFinder.git
-cd FastFinder
+git clone https://github.com/lynxistudio/Findra.git
+cd Findra
 
 # Build (compiles Swift sources, creates .app bundle, ad-hoc signs)
 bash build.sh
 
-# Output: FastFinder.app on your Desktop
-open ~/Desktop/FastFinder.app
+# Output: Findra.app on your Desktop
+open ~/Desktop/Findra.app
 ```
 
 ### What `build.sh` Does
@@ -397,9 +397,9 @@ Edit `build.sh` to change:
 
 ## Comparison
 
-### FastFinder vs. Everything (Windows)
+### Findra vs. Everything (Windows)
 
-| | Everything | FastFinder |
+| | Everything | Findra |
 |---|---|---|
 | Platform | Windows | macOS 14.0+ |
 | Indexing engine | NTFS Master File Table (MFT) | SQLite + FTS5 |
@@ -414,9 +414,9 @@ Edit `build.sh` to change:
 | Regex search | Yes | No (planned) |
 | File content search | No | No (file name only) |
 
-### FastFinder vs. Spotlight
+### Findra vs. Spotlight
 
-| | Spotlight | FastFinder |
+| | Spotlight | Findra |
 |---|---|---|
 | Scope | System-wide, all indexed volumes | User-selected directories only |
 | Control | Limited (Privacy exclusions) | Full (add/remove directories, exclusion rules) |
@@ -426,9 +426,9 @@ Edit `build.sh` to change:
 | Content search | Yes (file contents, metadata) | No (file names only) |
 | API | NSMetadataQuery (async) | Direct SQLite (sync, fast) |
 
-### FastFinder vs. Find Any File
+### Findra vs. Find Any File
 
-| | Find Any File | FastFinder |
+| | Find Any File | Findra |
 |---|---|---|
 | Search method | On-demand filesystem walk | Pre-built index |
 | Speed (500K files) | 10-30 seconds | <100ms |
@@ -443,13 +443,13 @@ Edit `build.sh` to change:
 <details>
 <summary><b>Why not use Spotlight's mdfind?</b></summary>
 
-Spotlight (`mdfind`) relies on the `mds`/`mdworker` daemons, which have documented reliability issues with network volumes and large file sets. FastFinder gives you a self-contained index that you fully control.
+Spotlight (`mdfind`) relies on the `mds`/`mdworker` daemons, which have documented reliability issues with network volumes and large file sets. Findra gives you a self-contained index that you fully control.
 </details>
 
 <details>
 <summary><b>Does it index file contents?</b></summary>
 
-No. FastFinder is a file **name** search tool, exactly like Everything on Windows. For content search, use Spotlight (`mdfind`) or a dedicated tool like `ripgrep`.
+No. Findra is a file **name** search tool, exactly like Everything on Windows. For content search, use Spotlight (`mdfind`) or a dedicated tool like `ripgrep`.
 </details>
 
 <details>
@@ -461,7 +461,7 @@ Approximately 1-2 MB per 100,000 indexed files. A 500,000-file index occupies ar
 <details>
 <summary><b>Can I run it at login?</b></summary>
 
-Yes. Go to System Settings → General → Login Items → add `FastFinder.app`. It will start silently with a menu bar icon.
+Yes. Go to System Settings → General → Login Items → add `Findra.app`. It will start silently with a menu bar icon.
 </details>
 
 <details>
@@ -473,13 +473,13 @@ The current build targets `arm64` (Apple Silicon). For Intel Macs, change the `-
 <details>
 <summary><b>Can I use it without installing Xcode?</b></summary>
 
-Yes. Download the pre-built `FastFinder.app` from the [Releases page](https://github.com/lynxistudio/FastFinder/releases). Xcode is only required if you want to build from source.
+Yes. Download the pre-built `Findra.app` from the [Releases page](https://github.com/lynxistudio/Findra/releases). Xcode is only required if you want to build from source.
 </details>
 
 <details>
 <summary><b>Why does macOS say the app is from an unidentified developer?</b></summary>
 
-FastFinder is ad-hoc signed, not notarized by Apple. This is expected for open-source apps. Right-click the app and choose "Open" to bypass Gatekeeper on first launch.
+Findra is ad-hoc signed, not notarized by Apple. This is expected for open-source apps. Right-click the app and choose "Open" to bypass Gatekeeper on first launch.
 </details>
 
 <details>
@@ -507,7 +507,7 @@ Contributions are welcome. Here's how:
 - Dark/light mode toggle (currently follows system)
 - Saved search presets
 - Export search results to CSV/JSON
-- CLI companion tool (`fastfinder search "query"`)
+- CLI companion tool (`findra search "query"`)
 - Homebrew cask distribution
 
 ### Code Style
@@ -528,7 +528,7 @@ MIT License. See [LICENSE](LICENSE) for full text.
 
 ## Acknowledgments
 
-FastFinder is inspired by:
+Findra is inspired by:
 
 - [**Everything**](https://www.voidtools.com/) by David Carpenter — the gold standard for instant file search on Windows
 - [**Find Any File**](https://apps.tempel.org/FindAnyFile/) by Thomas Tempelmann — a great on-demand search tool for macOS
@@ -539,4 +539,4 @@ Built with Swift, SQLite, and a strong belief that macOS users deserve better fi
 
 ---
 
-*FastFinder is not affiliated with voidtools or the Everything project.*
+*Findra is not affiliated with voidtools or the Everything project.*

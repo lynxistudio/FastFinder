@@ -11,18 +11,6 @@ final class ScanManager {
         "System Volume Information", ".DS_Store", "Thumbs.db"
     ]
 
-    // Media file extensions
-    private static let imageExtensions: Set<String> = [
-        "jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp",
-        "heic", "heif", "svg", "psd", "ai", "eps", "raw", "cr2",
-        "nef", "arw", "dng", "ico", "icns"
-    ]
-    private static let videoExtensions: Set<String> = [
-        "mp4", "mov", "avi", "mkv", "wmv", "flv", "webm", "m4v",
-        "mpg", "mpeg", "3gp", "ts", "rmvb", "divx", "f4v", "mts", "m2ts"
-    ]
-    private static let mediaExtensions: Set<String> = imageExtensions.union(videoExtensions)
-
     // MARK: - Directory Scanning (Full)
 
     func scanDirectory(_ dir: IndexDirectory, dbManager: DatabaseManager) -> Int {
@@ -113,9 +101,7 @@ final class ScanManager {
             results.append((fileName: fileName, fullPath: fullPath, size: size, modDate: modDate))
         }
 
-        let totalCount = results.count
-        results = results.filter { ScanManager.mediaExtensions.contains(URL(fileURLWithPath: $0.fullPath).pathExtension.lowercased()) }
-        print("文件扫描: \(totalCount) 个文件（过滤后保留 \(results.count) 个图片/视频）")
+        print("文件扫描: \(results.count) 个文件")
         return results
     }
 
@@ -169,7 +155,7 @@ final class ScanManager {
             process.executableURL = URL(fileURLWithPath: cmd)
             var args = ["-x", path, "-type", typeFlag]
             if incremental && lastScanTime > 0 {
-                let refPath = "/tmp/.fastfinder_ref_\(Int(lastScanTime))"
+                let refPath = "/tmp/.findra_ref_\(Int(lastScanTime))"
                 let refDate = Date(timeIntervalSince1970: lastScanTime)
                 if FileManager.default.fileExists(atPath: refPath) {
                     try? FileManager.default.setAttributes([.modificationDate: refDate], ofItemAtPath: refPath)
@@ -319,7 +305,7 @@ final class FSEventWatcher {
     private let path: String
     private let callback: (String) -> Void
     private var stream: FSEventStreamRef?
-    private let queue = DispatchQueue(label: "com.fastfinder.fsevents", qos: .utility)
+    private let queue = DispatchQueue(label: "com.lynxistudio.findra.fsevents", qos: .utility)
 
     init(path: String, callback: @escaping (String) -> Void) {
         self.path = path

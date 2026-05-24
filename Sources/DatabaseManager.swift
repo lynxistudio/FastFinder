@@ -6,13 +6,28 @@ private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.sel
 final class DatabaseManager {
     private var db: OpaquePointer?
     private let dbPath: String
-    private let dbQueue = DispatchQueue(label: "com.fastfinder.db", qos: .userInitiated)
+    private let dbQueue = DispatchQueue(label: "com.lynxistudio.findra.db", qos: .userInitiated)
 
     init() {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dbDir = appSupport.appendingPathComponent("FastFinder")
+        let dbDir = appSupport.appendingPathComponent("Findra")
+        let legacyDbDir = appSupport.appendingPathComponent("FastFinder")
+
+        if !FileManager.default.fileExists(atPath: dbDir.path),
+           FileManager.default.fileExists(atPath: legacyDbDir.path) {
+            try? FileManager.default.moveItem(at: legacyDbDir, to: dbDir)
+        }
+
         try? FileManager.default.createDirectory(at: dbDir, withIntermediateDirectories: true)
-        dbPath = dbDir.appendingPathComponent("fastfinder.db").path
+
+        let newDbURL = dbDir.appendingPathComponent("findra.db")
+        let legacyDbURL = dbDir.appendingPathComponent("fastfinder.db")
+        if !FileManager.default.fileExists(atPath: newDbURL.path),
+           FileManager.default.fileExists(atPath: legacyDbURL.path) {
+            try? FileManager.default.moveItem(at: legacyDbURL, to: newDbURL)
+        }
+
+        dbPath = newDbURL.path
     }
 
     deinit {

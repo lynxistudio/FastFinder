@@ -7,7 +7,7 @@ final class SearchManager {
         self.dbManager = dbManager
     }
 
-    func search(query: String, limit: Int = 500) -> [IndexedFile] {
+    func search(query: String, limit: Int = 10000) -> [IndexedFile] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return [] }
         return dbManager.searchFiles(query: trimmed, limit: limit)

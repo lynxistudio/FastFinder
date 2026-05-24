@@ -241,7 +241,7 @@ User types "report"
 │ WHERE files_fts MATCH       │
 │ 'report*'                   │
 │ ORDER BY rank               │
-│ LIMIT 500                   │
+│ LIMIT 10000                 ││
 └─────────────────────────────┘
       │
       ▼
@@ -335,7 +335,7 @@ FastFinder/
 - Query construction: sanitizes input, builds `MATCH` queries with proper escaping
 - Tokenization: splits user input and constructs FTS5-compatible search terms
 - Result: returns `[IndexedFile]` with ranking from FTS5 `rank` column
-- Limit: 500 results per query for UI performance
+- Limit: 10,000 results per query for UI performance
 
 </details>
 

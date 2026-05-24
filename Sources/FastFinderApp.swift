@@ -266,7 +266,7 @@ final class AppState: ObservableObject {
             searchResults = []
             return
         }
-        searchResults = searchManager.search(query: q, limit: 500)
+        searchResults = searchManager.search(query: q, limit: 10000)
         totalFileCount = dbManager.getTotalFileCount()
     }
 
